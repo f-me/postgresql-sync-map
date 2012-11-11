@@ -64,7 +64,7 @@ reportDeclaration f = do
     return (zip kTexts (map removeStar eTexts), sortAndOrder)
     where
         hasStar :: T.Text -> Bool
-        hasStar t = T.head t == '*'
+        hasStar = ("*" `T.isPrefixOf`)
 
         removeStar :: T.Text -> T.Text
         removeStar t
