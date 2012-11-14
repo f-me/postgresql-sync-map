@@ -27,6 +27,7 @@ import qualified Data.ByteString.Char8 as C8
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.ToField
 import qualified Data.Map as M
+import Data.Time (localTimeToUTC, utc)
 import Data.Time.Clock.POSIX
 
 import Debug.Trace as Debug
