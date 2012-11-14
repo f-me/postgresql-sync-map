@@ -136,7 +136,7 @@ instance FromField AnyValue where
 instance FromField FieldValue where
     fromField f d = foldr1 (<|>) tries where
         tries = [
-            (TimeValue . utcTimeToPOSIXSeconds) <$> fromField f d,
+            (TimeValue . utcTimeToPOSIXSeconds . localTimeToUTC utc) <$> fromField f d,
             IntValue <$> fromField f d,
             DoubleValue <$> fromField f d,
             BoolValue <$> fromField f d,
