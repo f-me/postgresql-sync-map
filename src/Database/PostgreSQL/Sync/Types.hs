@@ -115,7 +115,7 @@ escapeHKeyBS = T.encodeUtf8 . escapeHKey . T.decodeUtf8
 replaceWith :: Char -> String -> T.Text -> T.Text
 replaceWith ch str = T.intercalate (T.pack str) . T.split (== ch)
 
-escaped = T.cons '"' . (`T.snoc` '"') . replaceWith '"' "\\\"" . replaceWith '\'' "''"
+escaped = T.cons '"' . (`T.snoc` '"') . replaceWith '"' "\\\"" . replaceWith '\'' "''" . replaceWith '\\' "\\\\"
 
 escapedKey = replaceWith '\'' "''"
 

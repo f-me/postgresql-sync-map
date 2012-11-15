@@ -83,7 +83,7 @@ store (Sync tbl g cs) = fmap M.fromList . toActions . M.toList where
     hasColumn (k, _) = any ((== k) . C8.pack . syncKey) cs
     toAction (k, v) = do
         (SyncField k' c' _ t') <- maybe (Left $ "Unable to find key " ++ C8.unpack k) return $ find ((== k) . C8.pack . syncKey) cs
-        v' <- valueToAction t' v
+        v' <- either (\s -> Left ("Error in '" ++ k' ++ "': " ++ s)) Right $ valueToAction t' v
         return (c', v')
 
 -- | Load Map from postgresql
