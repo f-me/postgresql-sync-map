@@ -80,9 +80,9 @@ store (Sync tbl g cs) = fmap M.fromList . toActions . M.toList where
             hstored' <- return $ toField (M.fromList hstored)
             cols' <- mapM toAction cols
             return ((g, hstored') : cols')
-    hasColumn (k, _) = any ((== k) . C8.pack . syncKey) cs
+    hasColumn (k, _) = any ((== k) . (T.encodeUtf8 . T.pack) . syncKey) cs
     toAction (k, v) = do
-        (SyncField k' c' _ t') <- maybe (Left $ "Unable to find key " ++ C8.unpack k) return $ find ((== k) . C8.pack . syncKey) cs
+        (SyncField k' c' _ t') <- maybe (Left $ "Unable to find key " ++ (T.unpack . T.decodeUtf8) k) return $ find ((== k) . (T.encodeUtf8 . T.pack) . syncKey) cs
         v' <- either (\s -> Left ("Error in '" ++ k' ++ "': " ++ s)) Right $ valueToAction t' v
         return (c', v')
 
