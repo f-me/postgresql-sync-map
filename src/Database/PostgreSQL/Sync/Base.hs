@@ -1,5 +1,5 @@
 module Database.PostgreSQL.Sync.Base (
-    Condition(..)
+    Condition(..), Relations(..)
     ) where
 
 import qualified Data.Map as M
@@ -11,4 +11,8 @@ data Condition = Condition {
     conditionFieldsAffected :: [String],
     conditionString :: String,
     conditionArguments :: [Action] }
+        deriving (Show)
+
+data Relations = Relations {
+    relationsConditions :: [Condition] }
         deriving (Show)
