@@ -24,6 +24,7 @@ import Data.Time.Clock.POSIX
 
 import Database.PostgreSQL.Report
 import Database.PostgreSQL.Sync
+import Database.PostgreSQL.Sync.Condition
 
 import Data.Conduit
 import qualified Data.Conduit.List as CL

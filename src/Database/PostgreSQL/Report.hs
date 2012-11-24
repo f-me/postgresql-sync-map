@@ -23,7 +23,6 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Data.Char
 import Data.Monoid
-import Database.PostgreSQL.Sync
 import Database.PostgreSQL.Simple
 import Data.Either
 import Data.List
@@ -31,6 +30,8 @@ import Data.Maybe
 import qualified Data.Map as M
 import Data.String
 import Database.PostgreSQL.Report.Function
+import Database.PostgreSQL.Sync.Condition
+import Database.PostgreSQL.Sync
 import Text.Regex.Posix
 import System.Log
 

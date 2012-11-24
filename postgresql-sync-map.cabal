@@ -34,8 +34,6 @@ library
     exposed-modules:
         Database.PostgreSQL.Sync.Base
         Database.PostgreSQL.Sync
-        Database.PostgreSQL.Syncs
-        Database.PostgreSQL.Models
         Database.PostgreSQL.Report
         Database.PostgreSQL.Report.Function
         Database.PostgreSQL.Report.Xlsx

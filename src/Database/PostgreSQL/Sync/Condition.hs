@@ -1,14 +1,12 @@
 module Database.PostgreSQL.Sync.Condition (
-	toWhere, affects,
-	conditionSimple, conditionComplex,
-	FieldName,
-    condField,
-    condSyncField, syncsSyncField, modelsSyncField,
-    syncsField, modelsField, splitField, catField, parseField,
-    convertField, convertSyncs, convertModels,
+    toWhere, affects,
+    conditionSimple,
+    FieldName,
+    splitField, catField,
+    parseRelation,
 
-	module Database.PostgreSQL.Sync.Base
-	) where
+    module Database.PostgreSQL.Sync.Base
+    ) where
 
 import Control.Arrow
 import Control.Monad
@@ -48,46 +46,7 @@ affects tables cond = all (`elem` tables) $ conditionTablesAffected cond
 conditionSimple :: String -> String -> (String -> String) -> [Action] -> Condition
 conditionSimple table field fcond acts = Condition [table] [field] (fcond (table ++ "." ++ field)) acts
 
--- | Create condition from string
-conditionComplex :: Syncs -> String -> [Action] -> Condition
-conditionComplex ss s args = Condition tables fields' str args where
-	tables = nub $ map fst $ lefts fields
-	fields' = nub $ map (\(t, n) -> t ++ "." ++ n) $ lefts fields
-	-- TODO: Rewrite!
-	str = "(" ++ (unwords $ map (either (\(t, n) -> t ++ "." ++ n) id) fields) ++ ")"
-
-	swords = words s
-	fields = map (parseField' ss) swords
-	parseField' :: Syncs -> String -> Either (String, String) String
-	parseField' ss' s' = maybe (Right s') Left $ parseField ss' s'
-
 type FieldName = (String, String)
-
-condField :: Sync -> String -> FieldName
-condField (Sync t h cs) name = case find ((== name) . syncKey) cs of
-    (Just (SyncField k c _ _)) -> (t, c)
-    Nothing -> (t, h ++ " -> '" ++ T.unpack (escapeHKey (T.pack name)) ++ "'")
-
-condSyncField :: Sync -> String -> Maybe SyncField
-condSyncField (Sync t h cs) name = find ((== name) . syncKey) cs
-
-syncsSyncField :: Syncs -> String -> String -> Maybe SyncField
-syncsSyncField ss model name = do
-	s <- M.lookup model (syncsSyncs ss)
-	condSyncField s name
-
-modelsSyncField :: Models -> String -> String -> Maybe SyncField
-modelsSyncField ms model name = do
-	m <- M.lookup model (modelsModels ms)
-	condSyncField (modelSync m) name
-
--- | Convert (model, name) to (table, field) by Syncs
-syncsField :: Syncs -> String -> String -> Maybe FieldName
-syncsField ss model name = fmap (\s -> condField s name) $ M.lookup model (syncsSyncs ss)
-
--- | Convert (model, name) to (table, field) by Models
-modelsField :: Models -> String -> String -> Maybe FieldName
-modelsField ms model name = fmap (\s -> condField (modelSync s) name) $ M.lookup model (modelsModels ms)
 
 -- | Split model.name to (model, name)
 splitField :: String -> Maybe FieldName
@@ -99,20 +58,9 @@ splitField str = if valid then Just (model, name) else Nothing where
 catField :: FieldName -> String
 catField (model, name) = model ++ "." ++ name
 
--- | Parse field "model.name" to table-related field "table.column" or "table.garbage -> 'name'"
-parseField :: Syncs -> String -> Maybe FieldName
-parseField ss mname = if valid then syncsField ss model name else Nothing where
-	(model, name) = second (drop 1) $ break (== '.') mname
-	valid = all (\c -> isAlpha c || isDigit c || c `elem` "._") name
-
--- | Convert
-convertField :: (a -> FieldName -> Maybe FieldName) -> a -> String -> Maybe String
-convertField f v = splitField >=> f v >=> (return . catField)
-
--- | Convert by Syncs
-convertSyncs :: Syncs -> String -> Maybe String
-convertSyncs = convertField (\v -> uncurry (syncsField v))
-
--- | Convert by Models
-convertModels :: Models -> String -> Maybe String
-convertModels = convertField (\v -> uncurry (modelsField v))
+parseRelation :: String -> Condition
+parseRelation v = Condition tables fields v [] where
+    (tables, fields) = unzip $ mapMaybe parseField $ words v
+    parseField f = case break (== '.') f of
+        (_, "") -> Nothing
+        (tbl, col) -> Just (tbl, tail col)
