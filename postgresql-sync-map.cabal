@@ -1,5 +1,5 @@
 name:           postgresql-sync-map
-version:        0.2.2
+version:        0.3.0
 synopsis:       Synchronizing postgresql row and key-value container
 homepage:       http://github.com/mvoidex/postgresql-sync-map
 author:         Alexandr `voidex` Ruchkin
@@ -29,7 +29,8 @@ library
         text                            >= 0.11 && < 0.12,
         time                            >= 1.4 && < 1.5,
         transformers                    >= 0.2 && < 0.4,
-        xlsx                            >= 0.0.2.1 && < 0.1
+        xlsx                            >= 0.0.2.1 && < 0.1,
+        carma-sync == 0.1.*
     exposed-modules:
         Database.PostgreSQL.Sync.Base
         Database.PostgreSQL.Sync
@@ -42,4 +43,3 @@ library
         Database.PostgreSQL.Sync.Types
         Database.PostgreSQL.Sync.JSON
     other-modules:
-        Test

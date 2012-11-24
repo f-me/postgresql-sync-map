@@ -35,6 +35,8 @@ import qualified Codec.Xlsx.Writer as Xlsx
 import System.Log
 import System.Locale
 
+import Carma.ModelTables
+
 oneRow :: FilePath -> IO (Maybe (M.Map T.Text T.Text))
 oneRow f = do
     x <- Xlsx.xlsx f
@@ -71,8 +73,8 @@ reportDeclaration f = do
             | hasStar t = T.tail t
             | otherwise = t
 
-generateReport :: Syncs -> [ReportFunction] -> [(T.Text, T.Text)] -> [T.Text] -> [T.Text] -> TIO [[FieldValue]]
-generateReport ss funs m conds orders = generate rpt' ss funs where
+generateReport :: [TableDesc] -> [Condition] -> [ReportFunction] -> [(T.Text, T.Text)] -> [T.Text] -> [T.Text] -> TIO [[FieldValue]]
+generateReport tbls relations funs m conds orders = generate rpt' tbls relations funs where
     m' = map T.unpack $ map snd m
     flds = map report m'
     rpt = fromMaybe (error $ "Unable to create report: " ++ show m) $ mconcat $ flds
@@ -103,8 +105,8 @@ saveReport f ts fs = liftIO getCurrentTimeZone >>= saveReport' where
             row r rowData = M.unions $ zipWith (cell r) [1..] rowData
             cell r c d = M.singleton (c, r) (fieldValueToCell tz d)
 
-createReport :: Syncs -> [ReportFunction] -> (T.Text -> [T.Text]) -> [T.Text] -> [T.Text] -> FilePath -> FilePath -> TIO ()
-createReport ss funs superCond conds orders from to = scope "createReport" $ do
+createReport :: [TableDesc] -> [Condition] -> [ReportFunction] -> (T.Text -> [T.Text]) -> [T.Text] -> [T.Text] -> FilePath -> FilePath -> TIO ()
+createReport tbls relations funs superCond conds orders from to = scope "createReport" $ do
     (reportDecl, sortOrder) <- reportDeclaration from
     let
         fieldName = do
@@ -112,7 +114,7 @@ createReport ss funs superCond conds orders from to = scope "createReport" $ do
             r <- report $ T.unpack so
             (ReportField m n) <- listToMaybe $ reportFields r
             return $ T.pack $ m ++ "." ++ n
-    fs <- generateReport ss funs reportDecl (maybe [] superCond fieldName ++ conds) (maybe orders (: orders) fieldName)
+    fs <- generateReport tbls relations funs reportDecl (maybe [] superCond fieldName ++ conds) (maybe orders (: orders) fieldName)
     saveReport to (map fst reportDecl) fs
 
 fieldValueToCell :: TimeZone -> FieldValue -> Xlsx.CellData

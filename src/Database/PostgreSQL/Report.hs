@@ -34,6 +34,8 @@ import Database.PostgreSQL.Report.Function
 import Text.Regex.Posix
 import System.Log
 
+import Carma.ModelTables
+
 parseReportValueNull :: String -> Maybe (ReportValue ReportCondition)
 parseReportValueNull s = parseReportValue s <|> fmap nameToNull (parseReportValue ("ID(" ++ s ++ ")")) where
     nameToNull rv = rv { reportValueFunction = "" }
@@ -86,8 +88,8 @@ parseModelField s = select $ s =~ fieldRx where
     select ("", _, "", [m, n]) = Just $ Report [m] [ReportField m n] [] [] []
     select _ = Nothing
 
-generate :: Report -> Syncs -> [ReportFunction] -> TIO [[FieldValue]]
-generate r ss funs = scope "Report.generate" $ do
+generate :: Report -> [TableDesc] -> [Condition] -> [ReportFunction] -> TIO [[FieldValue]]
+generate r tbls relations funs = scope "Report.generate" $ do
     log Debug "Generating report"
     con <- connection
     generate' con
@@ -113,10 +115,14 @@ generate r ss funs = scope "Report.generate" $ do
                 (Report ms fs vs cs os) = r `mappend` rfuns `mappend` macroResults
 
                 -- table names, corresponding to models
-                ts = map (\ mdl -> maybe (error $ "Unknown model name: " ++ show mdl) syncTable $ (M.lookup mdl (syncsSyncs ss))) ms
-                toFieldStr f = maybe err (\(t, n) -> t ++ "." ++ n) $ parseField ss fstr where
-                    fstr = showField f
-                    err = error $ "Unknown field name: " ++ show fstr
+                ts = map (\mdl -> maybe (error $ "Unknown model: " ++ mdl) tableName $ find ((== mdl) . tableModel) tbls) ms
+
+                toFieldStr (ReportField m f) = fromMaybe err $ do
+                    tbl <- find ((== m) . tableModel) tbls
+                    return $ tableName tbl ++ "." ++ f
+                    where
+                        err = error $ "Unknown field " ++ m ++ "." ++ f
+
                 -- fields as they named in tables, not in models
                 fs' = map toFieldStr fs
                 -- conditions on fields
@@ -124,7 +130,7 @@ generate r ss funs = scope "Report.generate" $ do
                 -- orderby fields
                 os' = map toFieldStr os
                 -- condition relations between tables
-                csRels = filter (affects ts) (syncsRelations ss)
+                csRels = filter (affects ts) relations
                 reportRel = mconcat csRels
                 -- all conditions
                 allConds = cs' ++ map conditionString csRels
