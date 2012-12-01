@@ -29,6 +29,8 @@ import Data.List
 import Data.Maybe
 import qualified Data.Map as M
 import Data.String
+import qualified Data.ByteString.Char8 as C8
+import qualified Data.Text.Encoding as T
 import Database.PostgreSQL.Report.Function
 import Database.PostgreSQL.Sync.Condition
 import Database.PostgreSQL.Sync
@@ -98,6 +100,9 @@ generate r tbls relations funs = scope "Report.generate" $ do
         generate' con = do
             log Trace $ fromString $ "Report query: " ++ q
             log Trace $ fromString $ "Report conditions: " ++ show (conditionArguments reportRel)
+            when (length ts > 1 && sort ts /= sort relationed) $ do
+                log Error $ fromString $ "Not all tables have relations: " ++ intercalate ", " ts
+                error $ C8.unpack $ T.encodeUtf8 $ fromString $ "Таблицы " ++ intercalate ", " ts ++ " не могут быть в отчёте вместе"
             liftIO $ liftM (map applyFunctions) $ query con (fromString q) (conditionArguments reportRel)
             where
                 q = "select " ++ intercalate ", " fs' ++ " from " ++ intercalate ", " ts ++ condition' ++ orderby'
@@ -132,6 +137,10 @@ generate r tbls relations funs = scope "Report.generate" $ do
                 os' = map toFieldStr os
                 -- condition relations between tables
                 csRels = filter (affects ts) relations
+
+                -- | Affected tables on relation
+                relationed = nub $ concatMap conditionTablesAffected csRels
+
                 reportRel = mconcat csRels
                 -- all conditions
                 allConds = cs' ++ map conditionString csRels
