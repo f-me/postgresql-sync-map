@@ -123,11 +123,9 @@ generate r tbls relations funs = scope "Report.generate" $ do
                 -- try map table names corresponding to models
                 ts = map (\mdl -> maybe mdl tableName $ find ((== mdl) . tableModel) tbls) ms
 
-                toFieldStr (ReportField m f) = fromMaybe err $ do
+                toFieldStr (ReportField m f) = fromMaybe (m ++ "." ++ f) $ do
                     tbl <- find ((== m) . tableModel) tbls
                     return $ tableName tbl ++ "." ++ f
-                    where
-                        err = error $ "Unknown field " ++ m ++ "." ++ f
 
                 -- fields as they named in tables, not in models
                 fs' = map toFieldStr fs
