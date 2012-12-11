@@ -120,8 +120,8 @@ generate r tbls relations funs = scope "Report.generate" $ do
 
                 (Report ms fs vs cs os) = r `mappend` rfuns `mappend` macroResults
 
-                -- table names, corresponding to models
-                ts = map (\mdl -> maybe (error $ "Unknown model: " ++ mdl) tableName $ find ((== mdl) . tableModel) tbls) ms
+                -- try map table names corresponding to models
+                ts = map (\mdl -> maybe mdl tableName $ find ((== mdl) . tableModel) tbls) ms
 
                 toFieldStr (ReportField m f) = fromMaybe err $ do
                     tbl <- find ((== m) . tableModel) tbls
