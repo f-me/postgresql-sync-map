@@ -47,7 +47,7 @@ import Data.String
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Map as M
-import System.Log
+import System.Log.Simple
 
 data SyncConnection = SyncConnection {
     syncConn :: Connection,

@@ -35,7 +35,7 @@ import Database.PostgreSQL.Report.Function
 import Database.PostgreSQL.Sync.Condition
 import Database.PostgreSQL.Sync
 import Text.Regex.Posix
-import System.Log
+import System.Log.Simple
 
 import Carma.ModelTables
 

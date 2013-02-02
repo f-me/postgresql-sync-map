@@ -33,7 +33,7 @@ import qualified Codec.Xlsx as Xlsx
 import qualified Codec.Xlsx.Parser as Xlsx
 import qualified Codec.Xlsx.Writer as Xlsx
 
-import System.Log
+import System.Log.Simple
 import System.Locale
 
 import Carma.ModelTables
