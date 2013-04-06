@@ -1,21 +1,29 @@
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 
 -- | To make convertor to and from specified map, use list of field connectors:
+-- 
 -- @
 -- test = sync "table" "idcolumn" "garbage" [
 --   field "x"     "xrow"     int,     -- ^ Store 'x' as int in 'xrow'
 --   field "y"     "yrow"     int,     -- ^ Store 'y' as int in 'yrow'
 --   field "name"  "namerow"  string]  -- ^ Store 'name' as string in 'namerow'
 -- @
+-- 
 -- Now use it for reading-storing rows
--- @
--- -- Insert data
--- insert con test (Just 10) (M.fromList [("x", "123"), ("y", "22"), ("name", "Vasya"), ("blah", "blahblah"), ("foo", "bar")])
--- -- Select data by id
--- m <- select con test 10
--- -- Update specified fields (and also adds 'qoo' to hstore) by id
--- update con test 10 (M.fromList [("x", "333"), ("foo", "baz"), ("qoo", "aaa")]
--- @
+-- 
+-- Insert data
+-- 
+-- > insert con test (Just 10) (M.fromList [("x", "123"), ("y", "22"), ("name", "Vasya"), ("blah", "blahblah"), ("foo", "bar")])
+-- 
+-- Select data by id
+-- 
+-- > m <- select con test 10
+--
+-- Update specified fields (and also adds 'qoo' to hstore) by id
+--
+-- > update con test 10 (M.fromList [("x", "333"), ("foo", "baz"), ("qoo", "aaa")]
+--
+
 module Database.PostgreSQL.Sync (
     TIO, connection,
     transaction, inPG,
