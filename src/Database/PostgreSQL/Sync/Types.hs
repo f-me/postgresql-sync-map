@@ -27,7 +27,6 @@ import qualified Data.ByteString.Char8 as C8
 import Database.PostgreSQL.Simple.FromField
 import Database.PostgreSQL.Simple.ToField
 import qualified Data.Map as M
-import Data.Time (localTimeToUTC, utc)
 import Data.Time.Clock.POSIX
 
 import Debug.Trace as Debug
@@ -137,7 +136,7 @@ instance FromField AnyValue where
 instance FromField FieldValue where
     fromField f d = foldr1 (<|>) tries where
         tries = [
-            (TimeValue . utcTimeToPOSIXSeconds . localTimeToUTC utc) <$> fromField f d,
+            (TimeValue . utcTimeToPOSIXSeconds) <$> fromField f d,
             IntValue <$> fromField f d,
             DoubleValue <$> fromField f d,
             BoolValue <$> fromField f d,
