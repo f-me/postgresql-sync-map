@@ -55,11 +55,8 @@ import Data.String
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Map as M
-import System.Log.Simple
 
-data SyncConnection = SyncConnection {
-    syncConn :: Connection,
-    syncLog :: Log }
+data SyncConnection = SyncConnection { syncConn :: Connection }
 
 newtype TIO a = TIO (ReaderT SyncConnection IO a)
     deriving (Monad, Functor, Applicative, MonadIO, MonadCatchIO)
@@ -68,19 +65,14 @@ newtype TIO a = TIO (ReaderT SyncConnection IO a)
 connection :: TIO Connection
 connection = TIO $ asks syncConn
 
-instance MonadLog TIO where
-    askLog = TIO $ asks syncLog
 
-           
 -- | Transaction
-transaction :: Connection -> TIO a -> ReaderT Log IO a
-transaction con (TIO act) = do
-    l <- askLog
-    liftIO $ runReaderT act (SyncConnection con l)
+transaction :: Connection -> TIO a -> IO a
+transaction con (TIO act) = liftIO $ runReaderT act (SyncConnection con)
 --transaction con (TIO act) = withTransaction con (runReaderT act con)
 
 -- | For now there is no module for use with snaplet-postgresql-simple,
 -- but you can use functions using this simple wrap:
 -- withPG (inPG $ update ...)
-inPG :: TIO a -> Connection -> ReaderT Log IO a
+inPG :: TIO a -> Connection -> IO a
 inPG = flip transaction

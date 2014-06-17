@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 module Database.PostgreSQL.Report.Xlsx (
     oneRow,
@@ -8,9 +8,9 @@ module Database.PostgreSQL.Report.Xlsx (
     createReport
     ) where
 
-import Prelude hiding (log)
-
 import Control.Monad.IO.Class
+import Control.Monad.CatchIO
+import qualified Control.Exception as E
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.List
@@ -33,8 +33,8 @@ import qualified Codec.Xlsx as Xlsx
 import qualified Codec.Xlsx.Parser as Xlsx
 import qualified Codec.Xlsx.Writer as Xlsx
 
-import System.Log.Simple
 import System.Locale
+import System.Posix.Syslog
 
 import Carma.ModelTables
 
@@ -45,9 +45,17 @@ oneRow f = do
         Xlsx.sheetRowSource x 0 $$
         CL.peek
 
-reportDeclaration :: (MonadLog m, MonadIO m) => FilePath -> m ([(T.Text, T.Text)], Maybe T.Text)
+syslog' :: MonadIO m => Priority -> String -> String -> m ()
+syslog' p tag msg = liftIO $ syslog p $ concat ["pg-sync-map/", tag, " ", msg]
+
+logExceptions :: MonadCatchIO m => String -> m a -> m a
+logExceptions tag act = catch act $ \(e :: E.SomeException) -> do
+  syslog' Error tag $ show e
+  throw e
+
+reportDeclaration :: MonadIO m => FilePath -> m ([(T.Text, T.Text)], Maybe T.Text)
 reportDeclaration f = do
-    log Trace $ T.concat ["Loading report ", fromString f]
+    syslog' Debug "reportDeclaration" $ concat ["Loading report ", f]
     x <- liftIO $ Xlsx.xlsx f
     [k, e] <- liftIO $ runResourceT $
               Xlsx.cellSource x 0 (map Xlsx.int2col [1..256]) $$
@@ -61,8 +69,8 @@ reportDeclaration f = do
         toText (Just _) = T.empty
         kTexts = toTexts k
         eTexts = toTexts e
-    log Debug $ T.concat ["Column names: ", T.intercalate ", " kTexts]
-    log Debug $ T.concat ["Template expressions: ", T.intercalate ", " eTexts]
+    syslog' Debug "reportDeclaration" $ concat ["Column names: ", T.unpack $ T.intercalate ", " kTexts]
+    syslog' Debug "reportDeclaration" $ concat ["Template expressions: ", T.unpack $ T.intercalate ", " eTexts]
     let sortAndOrder = fmap removeStar $ find hasStar eTexts
     return (zip kTexts (map removeStar eTexts), sortAndOrder)
     where
@@ -85,10 +93,10 @@ generateReport tbls relations funs m conds orders = generate rpt' tbls relations
     rpt' = rpt `mappend` (mconcat . filter inTables $ conds' ++ orders')
     inTables r = not $ null $ intersect (reportModels rpt) (reportModels r)
 
-saveReport :: (MonadLog m, MonadIO m) => FilePath -> [T.Text] -> [[FieldValue]] -> m ()
+saveReport :: (MonadIO m) => FilePath -> [T.Text] -> [[FieldValue]] -> m ()
 saveReport f ts fs = liftIO getCurrentTimeZone >>= saveReport' where
     saveReport' tz = do
-        log Trace $ T.concat ["Saving report to ", fromString f]
+        syslog' Debug "saveReport" $ concat ["Saving report to ", f]
         liftIO $ Xlsx.writeXlsx f [sheet]
         where
             allRows = names : fs
@@ -107,7 +115,7 @@ saveReport f ts fs = liftIO getCurrentTimeZone >>= saveReport' where
             cell r c d = M.singleton (c, r) (fieldValueToCell tz d)
 
 createReport :: [TableDesc] -> [Condition] -> [ReportFunction] -> (T.Text -> [T.Text]) -> [T.Text] -> [T.Text] -> FilePath -> FilePath -> TIO ()
-createReport tbls relations funs superCond conds orders from to = scope "createReport" $ do
+createReport tbls relations funs superCond conds orders from to = logExceptions "createReport" $ do
     (reportDecl, sortOrder) <- reportDeclaration from
     let
         fieldName = do

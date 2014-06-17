@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
 -- | To make report use function report. Pass fields for report with conditions
 -- @
@@ -15,12 +15,12 @@ module Database.PostgreSQL.Report (
     module Database.PostgreSQL.Report.Function
     ) where
 
-import Prelude hiding (log)
-
 import Control.Arrow
 import Control.Applicative
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Monad.CatchIO
+import qualified Control.Exception as E
 import Data.Char
 import Data.Monoid
 import Database.PostgreSQL.Simple
@@ -35,7 +35,7 @@ import Database.PostgreSQL.Report.Function
 import Database.PostgreSQL.Sync.Condition
 import Database.PostgreSQL.Sync
 import Text.Regex.Posix
-import System.Log.Simple
+import System.Posix.Syslog
 
 import Carma.ModelTables
 
@@ -91,22 +91,32 @@ parseModelField s = select $ s =~ fieldRx where
     select ("", _, "", [m, n]) = Just $ Report [m] [ReportField m n] [] [] []
     select _ = Nothing
 
+
+syslog' :: MonadIO m => Priority -> String -> m ()
+syslog' p msg = liftIO $ syslog p $ concat ["pg-sync-map/Report.generate ", msg]
+
+logExceptions :: MonadCatchIO m => m a -> m a
+logExceptions act = catch act $ \(e :: E.SomeException) -> do
+  syslog' Error $ show e
+  throw e
+
+
 generate :: Report -> [TableDesc] -> [Condition] -> [ReportFunction] -> TIO [[FieldValue]]
-generate r tbls relations funs = scope "Report.generate" $ do
-    log Debug "Generating report"
+generate r tbls relations funs = logExceptions $ do
+    syslog' Debug "Generating report"
     con <- connection
     generate' con
     where
         generate' con = do
-            log Trace $ fromString $ "Report query: " ++ q
-            log Trace $ fromString $ "Report conditions: " ++ show (conditionArguments reportRel)
+            syslog' Debug $ "Report query: " ++ q
+            syslog' Debug $ "Report conditions: " ++ show (conditionArguments reportRel)
             when (length ts > 1 && sort ts /= sort relationed) $ do
-                log Error $ fromString $ "Not all tables have relations: " ++ intercalate ", " ts
+                syslog' Error $ "Not all tables have relations: " ++ intercalate ", " ts
                 error $ C8.unpack $ T.encodeUtf8 $ fromString $ "Таблицы " ++ intercalate ", " ts ++ " не могут быть в отчёте вместе"
             liftIO $ liftM (map applyFunctions) $ query con (fromString q) (conditionArguments reportRel)
             where
                 q = "select " ++ intercalate ", " fs' ++ " from " ++ intercalate ", " ts ++ condition' ++ orderby'
-                
+
                 usedFunNames = map reportValueFunction . reportValues $ r
                 usedFuns = filter ((`elem` usedFunNames) . reportFunctionName) funs
 
@@ -151,7 +161,7 @@ generate r tbls relations funs = scope "Report.generate" $ do
                 showCondition (ReportCondition fld ins) = "(" ++ intercalate (toFieldStr fld) ins ++ ")"
 
                 nullFun = onField "" id
-    
+
                 applyFunctions :: [FieldValue] -> [FieldValue]
                 applyFunctions fv = map apply vs where
                     args = M.fromList $ zip fs fv
