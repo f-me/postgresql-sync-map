@@ -10,6 +10,8 @@ module Database.PostgreSQL.Report.Xlsx (
 
 import Control.Monad.IO.Class
 import Control.Monad.CatchIO
+import Control.Monad.Trans.Resource
+
 import qualified Control.Exception as E
 import qualified Data.Map as M
 import qualified Data.Text as T
