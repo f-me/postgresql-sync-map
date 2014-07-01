@@ -1,5 +1,5 @@
 name:           postgresql-sync-map
-version:        0.6
+version:        0.6.1
 synopsis:       Synchronizing postgresql row and key-value container
 homepage:       http://github.com/mvoidex/postgresql-sync-map
 author:         Alexandr `voidex` Ruchkin
@@ -21,7 +21,7 @@ library
         directory                       >= 1.1 && < 1.3,
         filepath                        >= 1.3 && < 1.4,
         mtl                             >= 2.0 && < 2.2,
-        postgresql-simple               == 0.3.*,
+        postgresql-simple               >= 0.3 && < 0.5,
         hsyslog                         == 1.6.*,
         text                            >= 0.11 && < 0.12,
         time                            >= 1.4 && < 1.5,
